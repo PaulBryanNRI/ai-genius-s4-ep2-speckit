@@ -1,0 +1,63 @@
+name: 003 Deploy Backend API to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+  API_PROJECT_PATH: src/ai-genius-api
+  PUBLISH_OUTPUT_DIR: publish-api
+  DEPLOY_ZIP_PATH: deploy-api.zip
+
+jobs:
+  deploy-api:
+    name: Deploy Backend API
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish API
+        run: dotnet publish ${{ env.API_PROJECT_PATH }} -c Release -r linux-x64 --self-contained true -o ${{ env.PUBLISH_OUTPUT_DIR }}
+
+      - name: Create deployment zip
+        run: |
+          rm -f "${{ env.DEPLOY_ZIP_PATH }}"
+          cd "${{ env.PUBLISH_OUTPUT_DIR }}"
+          zip -r "../${{ env.DEPLOY_ZIP_PATH }}" .
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.APP_SERVICE_NAME }}
+          package: ${{ env.DEPLOY_ZIP_PATH }}

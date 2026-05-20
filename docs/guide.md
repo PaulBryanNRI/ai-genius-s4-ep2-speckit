@@ -618,3 +618,19 @@ Every decision - from auth to environment tiers to reviewer counts - lives in th
 ---
 
 *AI Genius - Season 4, Episode 2 · Spec-Kit with GitHub Copilot*
+## Backend API Deployment Workflow Usage Notes
+
+- Workflow file: `.github/workflows/003-deploy-api.yml`
+- Automatic trigger: push to `main`
+- Manual trigger: `workflow_dispatch` with `environment` (`dev`, `qa`, `prod`)
+- Required secret: `AZURE_CREDENTIALS`
+- Required variable: `APP_SERVICE_NAME`
+- Deployment path:
+  1. Checkout source
+  2. Setup .NET 10
+  3. Publish `src/ai-genius-api` as self-contained `linux-x64`
+  4. Zip publish output
+  5. Deploy zip with `azure/webapps-deploy@v3`
+- Concurrency control:
+  - `group: ${{ github.workflow }}-${{ github.ref }}`
+  - `cancel-in-progress: true`

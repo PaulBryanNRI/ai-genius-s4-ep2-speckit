@@ -1,8 +1,17 @@
 node_modules/
 dist/
+build/
+bin/
+obj/
 coverage/
 *.log
 .env
 .env.local
+.env.*
 .DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
 generated-pipeline.yml
