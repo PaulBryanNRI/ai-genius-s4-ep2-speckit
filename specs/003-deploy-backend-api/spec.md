@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "Deploy the AI Genius backend API via GitHub Actions with automatic main-branch deployment and Azure App Service release flow."
 
+## Clarifications
+
+### Session 2026-05-20
+
+- Q: Which .NET SDK version should the workflow use for API build and publish? → A: .NET 10.
+- Q: What Azure App Service Plan SKU/runtime should the deployment target use? → A: Linux B1.
+- Q: What deployment package method should be used for App Service deployment? → A: Zip deploy.
+- Q: What exact deployment step sequence should the workflow follow? → A: checkout → setup-dotnet → dotnet publish → zip artifact → azure/webapps-deploy@v3.
+- Q: How should the App Service name be provided to the workflow? → A: Via GitHub variable `APP_SERVICE_NAME`.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Automatic API Deployment on Main (Priority: P1)
@@ -73,6 +83,11 @@ As a maintainer, I want the workflow to follow the established environment and c
 - **FR-008**: The workflow MUST use `azure/webapps-deploy@v3` for the deployment step.
 - **FR-009**: The workflow MUST mark the run as failed when build or deployment steps fail.
 - **FR-010**: The workflow MUST expose enough run output for maintainers to identify whether failure occurred during build preparation or deployment.
+- **FR-011**: The workflow MUST install and use .NET SDK version 10 via `setup-dotnet` before publishing the API.
+- **FR-012**: The workflow MUST use zip deploy by publishing the API, zipping the publish output artifact, and passing that zip package to `azure/webapps-deploy@v3`.
+- **FR-013**: The workflow MUST execute deployment steps in this order: `checkout`, `setup-dotnet`, `dotnet publish`, zip artifact creation, then `azure/webapps-deploy@v3`.
+- **FR-014**: The workflow MUST resolve the App Service name from GitHub Actions variable `APP_SERVICE_NAME`.
+- **FR-015**: The deployment target App Service MUST be hosted on a Linux B1 App Service Plan.
 
 ### Key Entities
 
@@ -90,15 +105,19 @@ As a maintainer, I want the workflow to follow the established environment and c
 - **SC-003**: 100% of workflow runs use the backend source located at `src/ai-genius-api` and package it as a self-contained linux-x64 artifact.
 - **SC-004**: 100% of failed runs are visibly marked failed and indicate whether failure occurred in build or deployment stages.
 - **SC-005**: During a controlled test of two consecutive pushes to `main`, concurrency behavior prevents ambiguous overlapping deployment outcomes for the same ref.
+- **SC-006**: 100% of successful deployment runs use `setup-dotnet` with .NET 10 and execute the defined step order (`checkout` → `setup-dotnet` → `dotnet publish` → zip artifact → `azure/webapps-deploy@v3`).
+- **SC-007**: 100% of deployment runs pass a zip package to `azure/webapps-deploy@v3` and resolve the target app service name from `APP_SERVICE_NAME`.
 
 ## Dependencies
 
 - GitHub repository environments, variables, and secrets needed for deployment are configured and accessible to workflow runs.
 - Azure App Service target is provisioned and reachable for deployment operations.
 - Workflow permissions allow authentication and deployment actions to execute successfully.
+- GitHub repository variable `APP_SERVICE_NAME` is defined with the Azure App Service resource name.
 
 ## Assumptions
 
 - The repository already has required deployment credentials and app service identifiers configured in GitHub repository settings.
 - The existing infrastructure deployment workflow (`001-deploy-infra.yml`) is the source of truth for environment and concurrency behavior patterns.
 - The backend API remains a single deployable unit rooted at `src/ai-genius-api`.
+- The target Azure App Service is hosted on a Linux B1 App Service Plan.
